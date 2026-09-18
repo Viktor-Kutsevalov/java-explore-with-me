@@ -44,22 +44,18 @@ public class PublicEventController {
         log.info("GET /events: text={}, categories={}, paid={}, rangeStart={}, rangeEnd={}, onlyAvailable={}, sort={}, from={}, size={}",
                 text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
 
-        List<EventShortDto> result = publicEventService.searchPublic(
-                text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
-
         statsIntegrationService.hit(request.getRemoteAddr(), request.getRequestURI());
 
-        return result;
+        return publicEventService.searchPublic(
+                text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
     }
 
     @GetMapping("/{id}")
     public EventFullDto getById(@PathVariable Long id, HttpServletRequest request) {
         log.info("GET /events/{}", id);
 
-        EventFullDto result = publicEventService.getPublicEvent(id);
-
         statsIntegrationService.hit(request.getRemoteAddr(), request.getRequestURI());
 
-        return result;
+        return publicEventService.getPublicEvent(id);
     }
 }

@@ -10,6 +10,7 @@ import ru.practicum.ewm.dto.event.EventFullDto;
 import ru.practicum.ewm.dto.event.EventShortDto;
 import ru.practicum.ewm.dto.event.NewEventDto;
 import ru.practicum.ewm.dto.event.UpdateEventUserRequest;
+import ru.practicum.ewm.exception.BadRequestException;
 import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.mapper.EventMapper;
@@ -110,7 +111,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
 
     private void validateEventDate(LocalDateTime eventDate) {
         if (eventDate.isBefore(LocalDateTime.now().plusHours(MIN_HOURS_BEFORE_EVENT_USER))) {
-            throw new ConflictException(
+            throw new BadRequestException(
                     "Field: eventDate. Error: должно содержать дату, которая не ранее чем через "
                             + MIN_HOURS_BEFORE_EVENT_USER + " часа от текущего момента. Value: " + eventDate);
         }

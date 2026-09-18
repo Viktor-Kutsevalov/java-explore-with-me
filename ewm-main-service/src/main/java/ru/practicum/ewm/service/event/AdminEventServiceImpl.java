@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dto.event.EventFullDto;
 import ru.practicum.ewm.dto.event.UpdateEventAdminRequest;
+import ru.practicum.ewm.exception.BadRequestException;
 import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.mapper.EventMapper;
 import ru.practicum.ewm.model.Category;
@@ -26,7 +27,8 @@ public class AdminEventServiceImpl implements AdminEventService {
     private static final int MIN_HOURS_BEFORE_EVENT_ADMIN = 1;
     private static final LocalDateTime MIN_DATE = LocalDateTime.of(1970, 1, 1, 0, 0);
     private static final List<Long> EMPTY_LONG = List.of(-1L);
-    private static final List<EventState> EMPTY_STATES = List.of(EventState.PENDING, EventState.PUBLISHED, EventState.CANCELED);
+    private static final List<EventState> EMPTY_STATES =
+            List.of(EventState.PENDING, EventState.PUBLISHED, EventState.CANCELED);
 
     private final EventRepository eventRepository;
     private final EventCommonService common;
@@ -87,7 +89,7 @@ public class AdminEventServiceImpl implements AdminEventService {
                     "Cannot publish the event because it's not in the right state: " + event.getState());
         }
         if (event.getEventDate().isBefore(LocalDateTime.now().plusHours(MIN_HOURS_BEFORE_EVENT_ADMIN))) {
-            throw new ConflictException(
+            throw new BadRequestException(
                     "Field: eventDate. Error: дата начала изменяемого события должна быть не ранее чем за "
                             + MIN_HOURS_BEFORE_EVENT_ADMIN + " час от даты публикации");
         }
@@ -105,7 +107,7 @@ public class AdminEventServiceImpl implements AdminEventService {
 
     private void validateEventDateForAdmin(LocalDateTime eventDate) {
         if (eventDate.isBefore(LocalDateTime.now().plusHours(MIN_HOURS_BEFORE_EVENT_ADMIN))) {
-            throw new ConflictException(
+            throw new BadRequestException(
                     "Field: eventDate. Error: дата начала изменяемого события должна быть не ранее чем за "
                             + MIN_HOURS_BEFORE_EVENT_ADMIN + " час от даты публикации");
         }
