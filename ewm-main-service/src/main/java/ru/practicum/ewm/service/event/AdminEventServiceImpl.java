@@ -24,6 +24,9 @@ import java.util.List;
 public class AdminEventServiceImpl implements AdminEventService {
 
     private static final int MIN_HOURS_BEFORE_EVENT_ADMIN = 1;
+    private static final LocalDateTime MIN_DATE = LocalDateTime.of(1970, 1, 1, 0, 0);
+    private static final List<Long> EMPTY_LONG = List.of(-1L);
+    private static final List<EventState> EMPTY_STATES = List.of(EventState.PENDING, EventState.PUBLISHED, EventState.CANCELED);
 
     private final EventRepository eventRepository;
     private final EventCommonService common;
@@ -33,11 +36,20 @@ public class AdminEventServiceImpl implements AdminEventService {
     public List<EventFullDto> searchAdmin(List<Long> users, List<String> states, List<Long> categories,
                                           LocalDateTime rangeStart, LocalDateTime rangeEnd,
                                           int from, int size) {
-        common.parseStates(states); // валидация: если есть неизвестное состояние — 400
+        List<EventState> parsedStates = common.parseStates(states);
 
         Pageable pageable = common.buildPageable(from, size);
         Page<Event> page = eventRepository.findEventsByAdmin(
-                users, states, categories, rangeStart, rangeEnd, pageable);
+                normalizeLongs(users),
+                isEmpty(users),
+                parsedStates == null ? EMPTY_STATES : parsedStates,
+                parsedStates == null || parsedStates.isEmpty(),
+                normalizeLongs(categories),
+                isEmpty(categories),
+                rangeStart != null ? rangeStart : MIN_DATE,
+                rangeEnd != null ? rangeEnd : MIN_DATE,
+                rangeEnd == null,
+                pageable);
         return common.enrichFullList(page.getContent());
     }
 
@@ -97,5 +109,13 @@ public class AdminEventServiceImpl implements AdminEventService {
                     "Field: eventDate. Error: дата начала изменяемого события должна быть не ранее чем за "
                             + MIN_HOURS_BEFORE_EVENT_ADMIN + " час от даты публикации");
         }
+    }
+
+    private List<Long> normalizeLongs(List<Long> list) {
+        return isEmpty(list) ? EMPTY_LONG : list;
+    }
+
+    private boolean isEmpty(List<?> list) {
+        return list == null || list.isEmpty();
     }
 }

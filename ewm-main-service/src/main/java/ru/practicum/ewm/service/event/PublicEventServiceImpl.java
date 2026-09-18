@@ -27,6 +27,8 @@ public class PublicEventServiceImpl implements PublicEventService {
 
     private static final String SORT_EVENT_DATE = "EVENT_DATE";
     private static final String SORT_VIEWS = "VIEWS";
+    private static final LocalDateTime MIN_DATE = LocalDateTime.of(1970, 1, 1, 0, 0);
+    private static final List<Long> EMPTY_CATEGORIES = List.of(-1L);
 
     private final EventRepository eventRepository;
     private final EventCommonService common;
@@ -69,24 +71,40 @@ public class PublicEventServiceImpl implements PublicEventService {
         return common.enrichFull(event);
     }
 
-
     private List<EventShortDto> searchByEventDate(String text, List<Long> categories, Boolean paid,
                                                   LocalDateTime start, LocalDateTime end,
                                                   boolean onlyAvailable, int from, int size) {
         Sort sort = Sort.by("eventDate").ascending();
         Pageable pageable = common.buildPageable(from, size, sort);
         Page<Event> page = eventRepository.findPublishedEvents(
-                text, categories, paid, start, end, onlyAvailable, pageable);
+                normalizeText(text),
+                normalizeCategories(categories),
+                isEmpty(categories),
+                normalizePaid(paid),
+                paid == null,
+                start,
+                end != null ? end : MIN_DATE,
+                end == null,
+                onlyAvailable,
+                pageable);
         return common.enrichShortList(page.getContent());
     }
-
 
     private List<EventShortDto> searchByViews(String text, List<Long> categories, Boolean paid,
                                               LocalDateTime start, LocalDateTime end,
                                               boolean onlyAvailable, int from, int size) {
         Pageable unpaged = Pageable.unpaged(Sort.by("id").ascending());
         Page<Event> all = eventRepository.findPublishedEvents(
-                text, categories, paid, start, end, onlyAvailable, unpaged);
+                normalizeText(text),
+                normalizeCategories(categories),
+                isEmpty(categories),
+                normalizePaid(paid),
+                paid == null,
+                start,
+                end != null ? end : MIN_DATE,
+                end == null,
+                onlyAvailable,
+                unpaged);
 
         List<Event> events = all.getContent();
         if (events.isEmpty()) {
@@ -106,5 +124,21 @@ public class PublicEventServiceImpl implements PublicEventService {
         List<Event> pageEvents = sorted.subList(startIdx, endIdx);
 
         return common.enrichShortList(pageEvents, viewsMap);
+    }
+
+    private String normalizeText(String text) {
+        return text == null ? "" : text;
+    }
+
+    private List<Long> normalizeCategories(List<Long> categories) {
+        return isEmpty(categories) ? EMPTY_CATEGORIES : categories;
+    }
+
+    private boolean isEmpty(List<Long> list) {
+        return list == null || list.isEmpty();
+    }
+
+    private Boolean normalizePaid(Boolean paid) {
+        return paid == null ? Boolean.FALSE : paid;
     }
 }
