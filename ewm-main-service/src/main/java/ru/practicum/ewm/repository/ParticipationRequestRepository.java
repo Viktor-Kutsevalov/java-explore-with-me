@@ -2,6 +2,7 @@ package ru.practicum.ewm.repository;
 
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.practicum.ewm.model.ParticipationRequest;
@@ -31,4 +32,11 @@ public interface ParticipationRequestRepository extends JpaRepository<Participat
     @EntityGraph(attributePaths = {"event", "requester"})
     @Query("SELECT r FROM ParticipationRequest r WHERE r.id IN :ids")
     List<ParticipationRequest> findAllByIdIn(@Param("ids") List<Long> ids);
+
+    @Modifying
+    @Query("UPDATE ParticipationRequest r SET r.status = :newStatus " +
+            "WHERE r.event.id = :eventId AND r.status = :currentStatus")
+    int bulkUpdateStatus(@Param("eventId") Long eventId,
+                         @Param("currentStatus") RequestStatus currentStatus,
+                         @Param("newStatus") RequestStatus newStatus);
 }

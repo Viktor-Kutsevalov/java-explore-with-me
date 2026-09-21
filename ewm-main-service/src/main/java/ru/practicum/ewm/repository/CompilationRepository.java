@@ -12,11 +12,11 @@ import java.util.Optional;
 
 public interface CompilationRepository extends JpaRepository<Compilation, Long> {
 
-    @EntityGraph(attributePaths = {"events"})
+    @EntityGraph(attributePaths = {"events", "events.category", "events.initiator"})
     @Query("SELECT c FROM Compilation c WHERE c.id = :id")
     Optional<Compilation> findWithEventsById(@Param("id") Long id);
 
-    @EntityGraph(attributePaths = {"events"})
+    @EntityGraph(attributePaths = {"events", "events.category", "events.initiator"})
     @Query("SELECT c FROM Compilation c " +
             "WHERE (:pinned IS NULL OR c.pinned = :pinned)")
     Page<Compilation> findAllByPinned(@Param("pinned") Boolean pinned, Pageable pageable);

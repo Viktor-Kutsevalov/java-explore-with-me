@@ -3,6 +3,7 @@ package ru.practicum.ewm.service.compilation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,9 +76,7 @@ public class CompilationServiceImpl implements CompilationService {
     public List<CompilationDto> getAll(Boolean pinned, int from, int size) {
         Pageable pageable = buildPageable(from, size);
         Page<Compilation> page = compilationRepository.findAllByPinned(pinned, pageable);
-        return page.getContent().stream()
-                .map(eventCommon::enrichCompilation)
-                .toList();
+        return eventCommon.enrichCompilations(page.getContent());
     }
 
     @Override
@@ -108,6 +107,6 @@ public class CompilationServiceImpl implements CompilationService {
         if (size <= 0) {
             throw new BadRequestException("Size must be positive");
         }
-        return org.springframework.data.domain.PageRequest.of(from / size, size);
+        return PageRequest.of(from / size, size);
     }
 }

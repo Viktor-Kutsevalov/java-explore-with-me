@@ -7,7 +7,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.dto.compilation.CompilationDto;
-import ru.practicum.ewm.model.Compilation;
 import ru.practicum.ewm.dto.event.EventFullDto;
 import ru.practicum.ewm.dto.event.EventShortDto;
 import ru.practicum.ewm.exception.BadRequestException;
@@ -15,6 +14,7 @@ import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.integration.StatsIntegrationService;
 import ru.practicum.ewm.mapper.EventMapper;
 import ru.practicum.ewm.model.Category;
+import ru.practicum.ewm.model.Compilation;
 import ru.practicum.ewm.model.Event;
 import ru.practicum.ewm.model.User;
 import ru.practicum.ewm.model.enums.EventState;
@@ -138,9 +138,27 @@ public class EventCommonService {
                 .toList();
     }
 
-    private Map<Long, Long> countConfirmedMap(List<Long> eventIds) {
-        return requestRepository.countConfirmedByEventIds(eventIds).stream()
-                .collect(Collectors.toMap(EventConfirmedCount::getEventId, EventConfirmedCount::getCount));
+    public List<CompilationDto> enrichCompilations(List<Compilation> compilations) {
+        if (compilations.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> allEventIds = compilations.stream()
+                .flatMap(c -> c.getEvents().stream())
+                .map(Event::getId)
+                .distinct()
+                .toList();
+
+        Map<Long, Long> viewsMap = allEventIds.isEmpty()
+                ? Map.of()
+                : statsIntegrationService.getViewsForEvents(allEventIds);
+        Map<Long, Long> confirmedMap = allEventIds.isEmpty()
+                ? Map.of()
+                : countConfirmedMap(allEventIds);
+
+        return compilations.stream()
+                .map(c -> toCompilationDto(c, viewsMap, confirmedMap))
+                .toList();
     }
 
     public CompilationDto enrichCompilation(Compilation compilation) {
@@ -165,5 +183,30 @@ public class EventCommonService {
                 .pinned(compilation.getPinned())
                 .events(eventDtos)
                 .build();
+    }
+
+    private CompilationDto toCompilationDto(Compilation compilation,
+                                            Map<Long, Long> viewsMap,
+                                            Map<Long, Long> confirmedMap) {
+        List<EventShortDto> eventDtos = compilation.getEvents().stream()
+                .map(e -> {
+                    EventShortDto dto = EventMapper.toShortDto(e);
+                    dto.setViews(viewsMap.getOrDefault(e.getId(), 0L));
+                    dto.setConfirmedRequests(confirmedMap.getOrDefault(e.getId(), 0L));
+                    return dto;
+                })
+                .toList();
+
+        return CompilationDto.builder()
+                .id(compilation.getId())
+                .title(compilation.getTitle())
+                .pinned(compilation.getPinned())
+                .events(eventDtos)
+                .build();
+    }
+
+    private Map<Long, Long> countConfirmedMap(List<Long> eventIds) {
+        return requestRepository.countConfirmedByEventIds(eventIds).stream()
+                .collect(Collectors.toMap(EventConfirmedCount::getEventId, EventConfirmedCount::getCount));
     }
 }

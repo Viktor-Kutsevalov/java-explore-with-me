@@ -89,9 +89,8 @@ public class RequestServiceImpl implements RequestService {
         }
 
         request.setStatus(RequestStatus.CANCELED);
-        ParticipationRequest saved = requestRepository.save(request);
-        log.debug("Canceled request: {}", saved);
-        return RequestMapper.toDto(saved);
+        log.debug("Canceled request id={}", requestId);
+        return RequestMapper.toDto(request);
     }
 
     @Override
@@ -151,11 +150,11 @@ public class RequestServiceImpl implements RequestService {
             for (ParticipationRequest r : requests) {
                 if (freeSlots > 0) {
                     r.setStatus(RequestStatus.CONFIRMED);
-                    confirmedDtos.add(RequestMapper.toDto(requestRepository.save(r)));
+                    confirmedDtos.add(RequestMapper.toDto(r));
                     freeSlots--;
                 } else {
                     r.setStatus(RequestStatus.REJECTED);
-                    rejectedDtos.add(RequestMapper.toDto(requestRepository.save(r)));
+                    rejectedDtos.add(RequestMapper.toDto(r));
                 }
             }
 
@@ -168,7 +167,7 @@ public class RequestServiceImpl implements RequestService {
         } else {
             for (ParticipationRequest r : requests) {
                 r.setStatus(RequestStatus.REJECTED);
-                rejectedDtos.add(RequestMapper.toDto(requestRepository.save(r)));
+                rejectedDtos.add(RequestMapper.toDto(r));
             }
         }
 
@@ -187,7 +186,7 @@ public class RequestServiceImpl implements RequestService {
 
         for (ParticipationRequest r : pending) {
             r.setStatus(RequestStatus.REJECTED);
-            rejectedDtos.add(RequestMapper.toDto(requestRepository.save(r)));
+            rejectedDtos.add(RequestMapper.toDto(r));
         }
     }
 }

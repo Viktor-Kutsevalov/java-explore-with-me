@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dto.event.EventFullDto;
 import ru.practicum.ewm.dto.event.UpdateEventAdminRequest;
-import ru.practicum.ewm.exception.BadRequestException;
 import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.mapper.EventMapper;
 import ru.practicum.ewm.model.Category;
@@ -60,13 +59,6 @@ public class AdminEventServiceImpl implements AdminEventService {
     public EventFullDto updateAdminEvent(Long eventId, UpdateEventAdminRequest dto) {
         Event event = common.getEventOrThrow(eventId);
 
-        if (dto.getStateAction() != null) {
-            switch (dto.getStateAction()) {
-                case PUBLISH_EVENT -> publish(event);
-                case REJECT_EVENT -> reject(event);
-            }
-        }
-
         if (dto.getEventDate() != null) {
             validateEventDateForAdmin(dto.getEventDate());
         }
@@ -77,6 +69,13 @@ public class AdminEventServiceImpl implements AdminEventService {
         }
 
         EventMapper.applyAdminUpdate(event, dto);
+
+        if (dto.getStateAction() != null) {
+            switch (dto.getStateAction()) {
+                case PUBLISH_EVENT -> publish(event);
+                case REJECT_EVENT -> reject(event);
+            }
+        }
 
         Event saved = eventRepository.save(event);
         log.debug("Updated event by admin: {}", saved);
@@ -89,7 +88,7 @@ public class AdminEventServiceImpl implements AdminEventService {
                     "Cannot publish the event because it's not in the right state: " + event.getState());
         }
         if (event.getEventDate().isBefore(LocalDateTime.now().plusHours(MIN_HOURS_BEFORE_EVENT_ADMIN))) {
-            throw new BadRequestException(
+            throw new ConflictException(
                     "Field: eventDate. Error: дата начала изменяемого события должна быть не ранее чем за "
                             + MIN_HOURS_BEFORE_EVENT_ADMIN + " час от даты публикации");
         }
@@ -107,7 +106,7 @@ public class AdminEventServiceImpl implements AdminEventService {
 
     private void validateEventDateForAdmin(LocalDateTime eventDate) {
         if (eventDate.isBefore(LocalDateTime.now().plusHours(MIN_HOURS_BEFORE_EVENT_ADMIN))) {
-            throw new BadRequestException(
+            throw new ConflictException(
                     "Field: eventDate. Error: дата начала изменяемого события должна быть не ранее чем за "
                             + MIN_HOURS_BEFORE_EVENT_ADMIN + " час от даты публикации");
         }
