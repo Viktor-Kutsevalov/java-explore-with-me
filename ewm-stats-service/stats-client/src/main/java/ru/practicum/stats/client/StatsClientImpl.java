@@ -54,7 +54,7 @@ public class StatsClientImpl implements StatsClient {
             }
         }
 
-        String url = builder.encode().toUriString();
+        String url = builder.build(false).toUriString();
         log.debug("Requesting stats from: {}", url);
 
         ResponseEntity<List<ViewStatsDto>> response = restTemplate.exchange(
