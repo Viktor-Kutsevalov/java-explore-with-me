@@ -19,7 +19,9 @@ import ru.practicum.ewm.repository.ParticipationRequestRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -147,15 +149,31 @@ public class RequestServiceImpl implements RequestService {
                     ? (int) (event.getParticipantLimit() - confirmed)
                     : Integer.MAX_VALUE;
 
+            Set<Long> toConfirmIds = new HashSet<>();
+            List<Long> toRejectIds = new ArrayList<>();
+            int slots = freeSlots;
+
             for (ParticipationRequest r : requests) {
-                if (freeSlots > 0) {
+                if (slots > 0) {
+                    toConfirmIds.add(r.getId());
+                    slots--;
+                } else {
+                    toRejectIds.add(r.getId());
+                }
+            }
+
+            for (ParticipationRequest r : requests) {
+                if (toConfirmIds.contains(r.getId())) {
                     r.setStatus(RequestStatus.CONFIRMED);
                     confirmedDtos.add(RequestMapper.toDto(r));
-                    freeSlots--;
-                } else {
-                    r.setStatus(RequestStatus.REJECTED);
-                    rejectedDtos.add(RequestMapper.toDto(r));
                 }
+            }
+
+            if (!toRejectIds.isEmpty()) {
+                requestRepository.bulkUpdateStatusByIds(toRejectIds,
+                        RequestStatus.PENDING, RequestStatus.REJECTED);
+                List<ParticipationRequest> rejected = requestRepository.findAllByIdIn(toRejectIds);
+                rejected.forEach(r -> rejectedDtos.add(RequestMapper.toDto(r)));
             }
 
             if (event.getParticipantLimit() > 0
@@ -165,10 +183,10 @@ public class RequestServiceImpl implements RequestService {
             }
 
         } else {
-            for (ParticipationRequest r : requests) {
-                r.setStatus(RequestStatus.REJECTED);
-                rejectedDtos.add(RequestMapper.toDto(r));
-            }
+            List<Long> ids = requests.stream().map(ParticipationRequest::getId).toList();
+            requestRepository.bulkUpdateStatusByIds(ids, RequestStatus.PENDING, RequestStatus.REJECTED);
+            List<ParticipationRequest> rejected = requestRepository.findAllByIdIn(ids);
+            rejected.forEach(r -> rejectedDtos.add(RequestMapper.toDto(r)));
         }
 
         return EventRequestStatusUpdateResult.builder()
@@ -184,9 +202,15 @@ public class RequestServiceImpl implements RequestService {
                 .filter(r -> !excludeIds.contains(r.getId()))
                 .toList();
 
-        for (ParticipationRequest r : pending) {
-            r.setStatus(RequestStatus.REJECTED);
-            rejectedDtos.add(RequestMapper.toDto(r));
+        if (pending.isEmpty()) {
+            return;
         }
+
+        List<Long> pendingIds = pending.stream().map(ParticipationRequest::getId).toList();
+        requestRepository.bulkUpdateStatusByIds(pendingIds,
+                RequestStatus.PENDING, RequestStatus.REJECTED);
+
+        List<ParticipationRequest> rejected = requestRepository.findAllByIdIn(pendingIds);
+        rejected.forEach(r -> rejectedDtos.add(RequestMapper.toDto(r)));
     }
 }
